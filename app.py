@@ -1,10 +1,11 @@
+import os
 from flask import Flask, request, jsonify, render_template
 from openai import OpenAI
 
 app = Flask(__name__)
 
 client = OpenAI(
-    api_key="OPENAI_API_KEY"  # ← reemplaza por tu clave real
+    api_key=os.environ.get("OPENAI_API_KEY")
 )
 
 contexto = [
@@ -20,19 +21,24 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chatear():
-    data = request.get_json()
-    mensaje = data.get("mensaje", "")
-    contexto.append({"role": "user", "content": mensaje})
+    try:
+        data = request.get_json()
+        mensaje = data.get("mensaje", "")
+        contexto.append({"role": "user", "content": mensaje})
 
-    respuesta = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=contexto
-    )
+        respuesta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=contexto
+        )
 
-    respuesta_ia = respuesta.choices[0].message.content
-    contexto.append({"role": "assistant", "content": respuesta_ia})
+        respuesta_ia = respuesta.choices[0].message.content
+        contexto.append({"role": "assistant", "content": respuesta_ia})
 
-    return jsonify({"respuesta": respuesta_ia})
+        return jsonify({"respuesta": respuesta_ia})
+    
+    except Exception as e:
+        print("🔥 ERROR:", e)
+        return jsonify({"respuesta": "Lo siento, hubo un error 😥"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
