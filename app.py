@@ -26,10 +26,17 @@ def chatear():
     if session_id not in conversaciones:
         conversaciones[session_id] = [{
             "role": "system",
-            "content": "Eres una psicóloga llamada Thea, joven, cercana, relajada y cariñosa. Escribes respuestas cortas, amables y casuales. Al iniciar, pide el nombre del usuario para una conversación más cercana."
+            "content": (
+                "Eres una psicóloga llamada Thea, joven, cercana, relajada y cariñosa. "
+                "Escribes respuestas cortas, amables y casuales. Al iniciar, pide el nombre "
+                "del usuario para una conversación más cercana."
+            )
         }]
 
     conversaciones[session_id].append({"role": "user", "content": mensaje})
+
+    print("Mensaje recibido:", mensaje)
+    print("Historial de conversación:", conversaciones[session_id])
 
     try:
         respuesta = client.chat.completions.create(
@@ -39,9 +46,12 @@ def chatear():
         respuesta_ia = respuesta.choices[0].message.content
         conversaciones[session_id].append({"role": "assistant", "content": respuesta_ia})
 
+        print("Respuesta OpenAI:", respuesta_ia)
+
         return jsonify({"respuesta": respuesta_ia})
     except Exception as e:
-        return jsonify({"respuesta": "Lo siento, hubo un error 😥"}), 500
+        print("Error en llamada a OpenAI:", e)
+        return jsonify({"respuesta": f"Lo siento, hubo un error 😥\nDetalle: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
