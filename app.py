@@ -8,7 +8,7 @@ from openai import OpenAI
 app = Flask(__name__)
 
 # Configuración de la sesión
-app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY")
+app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", "clave-secreta-de-prueba")
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
