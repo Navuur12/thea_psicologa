@@ -2,140 +2,62 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Chat con Thea</title>
-  <style>
-    body {
-      background-color: #f0f6ff;
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-
-    .chat-container {
-      max-width: 700px;
-      margin: 30px auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      height: 90vh;
-    }
-
-    .header {
-      background: #4285f4;
-      color: white;
-      padding: 20px;
-      font-size: 1.5em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .header img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-    }
-
-    .chat-messages {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .message {
-      margin: 12px 0;
-      max-width: 80%;
-      padding: 12px 16px;
-      border-radius: 15px;
-      line-height: 1.4em;
-    }
-
-    .user {
-      background-color: #d0eaff;
-      align-self: flex-end;
-      border-bottom-right-radius: 0;
-    }
-
-    .thea {
-      background-color: #e7f1ff;
-      align-self: flex-start;
-      border-bottom-left-radius: 0;
-    }
-
-    .chat-input {
-      display: flex;
-      padding: 10px;
-      border-top: 1px solid #ccc;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      margin-right: 10px;
-    }
-
-    button {
-      background: #4285f4;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #3367d6;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thea - Psicóloga IA</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="chat-container">
-    <div class="header">
-      <img src="{{ url_for('static', filename='thea_psicologa.png') }}" alt="Thea">
-      <span>Thea</span>
-    </div>
-    <div class="chat-messages" id="chat">
-      <div class="message thea">¡Hola! Soy Thea 😊 ¿Cómo te llamas?</div>
-    </div>
-    <div class="chat-input">
-      <input type="text" id="mensaje" placeholder="Escribe tu mensaje..." />
-      <button onclick="enviarMensaje()">Enviar</button>
-    </div>
+  <div class="container">
+    <h1>Hola, soy Thea 😊</h1>
+
+    <div id="chat"></div>
+
+    <input type="text" id="mensaje" placeholder="Escribe tu mensaje...">
+    <button id="enviar">Enviar</button>
   </div>
 
   <script>
-    function enviarMensaje() {
-      const input = document.getElementById("mensaje");
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("mensaje");
+    const boton = document.getElementById("enviar");
+
+    function agregarMensaje(texto, clase) {
+      const msg = document.createElement("div");
+      msg.textContent = texto;
+      msg.className = clase;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    boton.addEventListener("click", () => {
       const mensaje = input.value.trim();
       if (!mensaje) return;
 
-      agregarMensaje(mensaje, "user");
+      agregarMensaje("Tú: " + mensaje, "user");
       input.value = "";
 
       fetch("/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ mensaje })
       })
-        .then(res => res.json())
-        .then(data => agregarMensaje(data.respuesta, "thea"))
-        .catch(err => agregarMensaje("Lo siento, hubo un error 😥", "thea"));
-    }
+      .then(res => res.json())
+      .then(data => {
+        agregarMensaje("Thea: " + data.respuesta, "thea");
+      })
+      .catch(() => {
+        agregarMensaje("❌ Ocurrió un error al contactar con Thea", "error");
+      });
+    });
 
-    function agregarMensaje(texto, clase) {
-      const chat = document.getElementById("chat");
-      const div = document.createElement("div");
-      div.className = "message " + clase;
-      div.innerText = texto;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        boton.click();
+      }
+    });
   </script>
 </body>
 </html>
