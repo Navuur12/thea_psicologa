@@ -1,57 +1,57 @@
 import os
-from flask import Flask, request, jsonify, render_template
+import uuid
+from flask import Flask, request, jsonify, render_template, session
+from flask_session import Session
 from openai import OpenAI
 
+# Inicializa Flask
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 
+# Configuración de la sesión
+app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY")
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
+
+# Cliente de OpenAI
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY")
 )
 
-# Diccionario para manejar múltiples sesiones por usuario
-conversaciones = {}
+# Función para obtener o crear el contexto del usuario
+def get_user_context():
+    if "user_id" not in session:
+        session["user_id"] = str(uuid.uuid4())
+        session["contexto"] = [{
+            "role": "system",
+            "content": "Eres una psicóloga llamada Thea, joven, cercana, relajada y cariñosa. Escribes respuestas cortas, amables y casuales. Al iniciar, pide el nombre del usuario para una conversación más cercana."
+        }]
+    return session["contexto"]
 
+# Ruta principal
 @app.route("/")
 def home():
     return render_template("index.html")
 
+# Ruta del chat
 @app.route("/chat", methods=["POST"])
 def chatear():
     data = request.get_json()
     mensaje = data.get("mensaje", "")
-    session_id = data.get("session_id", "default")
+    
+    contexto = get_user_context()
+    contexto.append({"role": "user", "content": mensaje})
 
-    # Crear historial de conversación si no existe
-    if session_id not in conversaciones:
-        conversaciones[session_id] = [{
-            "role": "system",
-            "content": (
-                "Eres una psicóloga llamada Thea, joven, cercana, relajada y cariñosa. "
-                "Escribes respuestas cortas, amables y casuales. Al iniciar, pide el nombre "
-                "del usuario para una conversación más cercana."
-            )
-        }]
+    respuesta = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=contexto
+    )
 
-    conversaciones[session_id].append({"role": "user", "content": mensaje})
+    respuesta_ia = respuesta.choices[0].message.content
+    contexto.append({"role": "assistant", "content": respuesta_ia})
+    session["contexto"] = contexto  # Guarda el contexto actualizado en la sesión
 
-    print("Mensaje recibido:", mensaje)
-    print("Historial de conversación:", conversaciones[session_id])
+    return jsonify({"respuesta": respuesta_ia})
 
-    try:
-        respuesta = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=conversaciones[session_id]
-        )
-        respuesta_ia = respuesta.choices[0].message.content
-        conversaciones[session_id].append({"role": "assistant", "content": respuesta_ia})
-
-        print("Respuesta OpenAI:", respuesta_ia)
-
-        return jsonify({"respuesta": respuesta_ia})
-    except Exception as e:
-        print("Error en llamada a OpenAI:", e)
-        return jsonify({"respuesta": f"Lo siento, hubo un error 😥\nDetalle: {str(e)}"}), 500
-
+# Ejecutar en modo desarrollo (no se usa en Render)
 if __name__ == "__main__":
     app.run(debug=True)
